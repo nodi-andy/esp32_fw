@@ -303,7 +303,7 @@ namespace WebUI {
         }
 
         if (!openSFSFile(SPIFFS, path.c_str())) {
-            report_status_message(Error::FsFailedRead, (espresponse) ? espresponse->client() : CLIENT_ALL);
+            report_status_message(Error::SPIFsFailedRead, (espresponse) ? espresponse->client() : CLIENT_ALL);
             webPrintln("");
             return Error::FsFailedOpenFile;
         }

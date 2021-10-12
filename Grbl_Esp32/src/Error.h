@@ -66,6 +66,7 @@ enum class Error : uint8_t {
     PParamMaxExceeded           = 39,
     FsFailedMount               = 60,  // SD Failed to mount
     FsFailedRead                = 61,  // SD Failed to read file
+    SPIFsFailedRead             = 161,  // SD Failed to read file
     FsFailedOpenDir             = 62,  // SD card failed to open directory
     FsDirNotFound               = 63,  // SD Card directory not found
     FsFileEmpty                 = 64,  // SD Card directory not found

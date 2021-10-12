@@ -63,6 +63,7 @@ std::map<Error, const char*> ErrorNames = {
     { Error::PParamMaxExceeded, "P param max exceeded" },
     { Error::FsFailedMount, "Failed to mount device" },
     { Error::FsFailedRead, "Failed to read" },
+    { Error::SPIFsFailedRead, "SPI Failed to read" },
     { Error::FsFailedOpenDir, "Failed to open directory" },
     { Error::FsDirNotFound, "Directory not found" },
     { Error::FsFileEmpty, "File empty" },

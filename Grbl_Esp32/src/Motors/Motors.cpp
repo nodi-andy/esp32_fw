@@ -40,8 +40,6 @@
 #include "UnipolarMotor.h"
 #include "RcServo.h"
 #include "Dynamixel2.h"
-#include "TrinamicDriver.h"
-#include "TrinamicUartDriver.h"
 
 Motors::Motor* myMotor[MAX_AXES][MAX_GANGED];  // number of axes (normal and ganged)
 void           init_motors() {
