@@ -123,12 +123,19 @@ void controlCheckTask(void* pvParameters) {
         int evt;
         xQueueReceive(control_sw_queue, &evt, portMAX_DELAY);  // block until receive queue
         vTaskDelay(CONTROL_SW_DEBOUNCE_PERIOD);                // delay a while
+
         ControlPins pins = system_control_get_state();
         if (pins.value) {
             system_exec_control_pin(pins);
         }
-        debouncing = false;
 
+
+        ControlPins npins = system_control_get_neg_state();
+        if (npins.value) {
+            system_exec_control_pin_neg(npins);
+        }
+
+        debouncing = false;
         static UBaseType_t uxHighWaterMark = 0;
 #    ifdef DEBUG_TASK_STACK
         reportTaskStackSize(uxHighWaterMark);
@@ -190,6 +197,28 @@ float* system_get_mpos() {
     system_convert_array_steps_to_mpos(position, sys_position);
     return position;
 };
+
+// Returns control pin state as a uint8 bitfield. Each bit indicates the input pin state, where
+// triggered is 1 and not triggered is 0. Invert mask is applied. Bitfield organization is
+// defined by the ControlPin in System.h.
+ControlPins system_control_get_neg_state() {
+    ControlPins defined_pins;
+    defined_pins.value = 0;
+
+    ControlPins pin_states;
+    pin_states.value = 0;
+
+    defined_pins.bit.macro0 = true;
+    if (digitalRead(MACRO_BUTTON_0_PIN) == false) {
+        pin_states.bit.macro0 = true;
+    }
+
+    #ifdef INVERT_CONTROL_PIN_MASK
+        pin_states.value ^= (INVERT_CONTROL_PIN_MASK & defined_pins.value);
+    #endif
+
+    return pin_states;
+}
 
 // Returns control pin state as a uint8 bitfield. Each bit indicates the input pin state, where
 // triggered is 1 and not triggered is 0. Invert mask is applied. Bitfield organization is
@@ -277,6 +306,19 @@ void system_exec_control_pin(ControlPins pins) {
     }
 }
 
+// execute the function of the control pin
+void system_exec_control_pin_neg(ControlPins pins) {
+    if (pins.bit.macro0) {
+        user_defined_macro_neg(0);  // function must be implemented by user
+    } else if (pins.bit.macro1) {
+        user_defined_macro_neg(1);  // function must be implemented by user
+    } else if (pins.bit.macro2) {
+        user_defined_macro_neg(2);  // function must be implemented by user
+    } else if (pins.bit.macro3) {
+        user_defined_macro_neg(3);  // function must be implemented by user
+    }
+}
+
 void sys_digital_all_off() {
     for (uint8_t io_num = 0; io_num < MaxUserDigitalPin; io_num++) {
         myDigitalOutputs[io_num]->set_level(LOW);
@@ -337,21 +379,57 @@ uint8_t sys_calc_pwm_precision(uint32_t freq) {
 
     return precision - 1;
 }
-void __attribute__((weak)) user_defined_macro(uint8_t index) {
+void __attribute__((weak)) user_defined_macro_neg(uint8_t index) {
     // must be in Idle
-    if (sys.state != State::Idle) {
+    /*if (sys.state != State::Idle) {
         grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro button only permitted in idle");
         return;
-    }
+    }*/
 
     String user_macro;
     char   line[255];
     switch (index) {
         case 0:
             user_macro = user_macro0->get();
+            WebUI::inputBuffer.push("[ESP700]macro0u.g\r\n");
+            grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro NEG 0");
             break;
         case 1:
             user_macro = user_macro1->get();
+            WebUI::inputBuffer.push("[ESP700]macro1u.g\r\n");
+            grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro NEG 1");
+            break;
+        case 2:
+            user_macro = user_macro2->get();
+            break;
+        case 3:
+            user_macro = user_macro3->get();
+            break;
+        default:
+            return;
+    }
+}
+
+
+void __attribute__((weak)) user_defined_macro(uint8_t index) {
+    /*// must be in Idle
+    if (sys.state != State::Idle) {
+        grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro button only permitted in idle");
+        return;
+    }*/
+
+    String user_macro;
+    char   line[255];
+    switch (index) {
+        case 0:
+            user_macro = user_macro0->get();
+            WebUI::inputBuffer.push("[ESP700]macro0.g\r\n");
+            grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 0");
+            break;
+        case 1:
+            user_macro = user_macro1->get();
+            WebUI::inputBuffer.push("[ESP700]macro1.g\r\n");
+            grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 1");
             break;
         case 2:
             user_macro = user_macro2->get();
@@ -363,9 +441,7 @@ void __attribute__((weak)) user_defined_macro(uint8_t index) {
             return;
     }
 
-    WebUI::inputBuffer.push("[ESP700]macro0.g\r\n");
-
-    if (user_macro == "") {
+    /*if (user_macro == "") {
         grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro User/Macro%d empty", index);
         return;
     }
@@ -373,5 +449,5 @@ void __attribute__((weak)) user_defined_macro(uint8_t index) {
     user_macro.replace('&', '\n');
     user_macro.toCharArray(line, 255, 0);
     strcat(line, "\r");
-    WebUI::inputBuffer.push(line);
+    WebUI::inputBuffer.push(line);*/
 }
