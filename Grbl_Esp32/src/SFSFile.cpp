@@ -24,9 +24,12 @@ boolean closeSFSFile() {
     if (!mySFSFile) {
         return false;
     }
+    
     SFS_ready_next          = false;
     sfs_current_line_number = 0;
     mySFSFile.close();
+    set_sfs_state(SDState::Idle);
+    grbl_sendf(CLIENT_ALL, "[closeFile:]\r\n");
     return true;
 }
 
@@ -57,7 +60,6 @@ boolean readSFSFileLine(char* line, int maxlen) {
     line[len] = '\0';
     return len || mySFSFile.available();
 }
-
 
 uint32_t sfs_get_current_line_number() {
     return sfs_current_line_number;

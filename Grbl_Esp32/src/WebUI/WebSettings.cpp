@@ -164,6 +164,12 @@ namespace WebUI {
 }
 
 Error WebCommand::action(char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESPResponseStream* out) {
+    if( sys.state == State::Jog) {
+        execute_realtime_command(Cmd::JogCancel, CLIENT_ALL);
+        protocol_execute_realtime();
+        closeSFSFile();
+        vTaskDelay(1 / portTICK_RATE_MS);  // Yield to other tasks
+    }
     if (_cmdChecker && _cmdChecker()) {
         return Error::AnotherInterfaceBusy;
     }
@@ -293,10 +299,21 @@ namespace WebUI {
     }
 
     static Error runLocalFile(char* parameter, AuthenticationLevel auth_level) {  // ESP700
+        webPrintln("ESP700:Run");
+
+        if(sys.state == State::Jog) {
+            webPrintln("ESP700:BusyJog");
+        }
+        if(get_sfs_state(false) == SDState::BusyPrinting) {
+            webPrintln("ESP700:BusyFile");
+            return Error::FsFailedOpenFile;
+        }
+
         if (*parameter == '\0') {
-            webPrintln("Missing file name!");
+            webPrintln("ESP700:Missing file name!");
             return Error::InvalidValue;
         }
+
         String path = trim(parameter);
         if (path[0] != '/') {
             path = "/" + path;
@@ -312,55 +329,19 @@ namespace WebUI {
         if (!readSFSFileLine(fileLine, 255)) {
             //No need notification here it is just a macro
             closeSFSFile();
-            webPrintln("");
+            webPrintln("ESP700:No file");
             return Error::Ok;
         }
+        webPrintln("ESP700:Line:");
+        webPrintln(fileLine);
+
         SFS_client     = (espresponse) ? espresponse->client() : CLIENT_ALL;
         SFS_auth_level = auth_level;
-        // execute the first line now; Protocol.cpp handles later ones when SD_ready_next
+        // execute the first line now; Protocol.cpp handles later ones when SFS_ready_next
         report_status_message(execute_line(fileLine, SFS_client, SFS_auth_level), SFS_client);
         report_realtime_status(SFS_client);
-        webPrintln("");
+        webPrintln("ESP700:Done");
         return Error::Ok;
-        /*if (sys.state != State::Idle) {
-            webPrintln("Busy");
-            return Error::IdleError;
-        }
-        String path = trim(parameter);
-        if ((path.length() > 0) && (path[0] != '/')) {
-            path = "/" + path;
-        }
-        if (!SPIFFS.exists(path)) {
-            webPrintln("Error: No such file!");
-            return Error::FsFileNotFound;
-        }
-        
-        mySFSFile = SPIFFS.open(path, FILE_READ);
-        if (!mySFSFile) {  //if file open success
-            return Error::FsFailedOpenFile;
-        }
-        
-        webPrintln("Batch started.");
-        //COMMANDS::wait(1);
-        //until no line in file
-        Error   err;
-        Error   accumErr = Error::Ok;*/
-        /*uint8_t client   = (espresponse) ? espresponse->client() : CLIENT_ALL;
-        uint8_t iLine = 0;
-        while (currentfile.available()) {
-            String currentline = currentfile.readStringUntil('\n');
-            if (currentline.length() > 0) {
-                byte line[256];
-                currentline.getBytes(line, 255);
-                err = execute_line((char*)line, client, auth_level);
-                if (err != Error::Ok) {
-                    accumErr = err;
-                }
-                COMMANDS::wait(1);
-            }
-        }
-        currentfile.close();
-        return accumErr;*/
     }
 
     static Error showLocalFile(char* parameter, AuthenticationLevel auth_level) {  // ESP701

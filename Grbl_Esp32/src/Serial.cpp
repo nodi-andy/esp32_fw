@@ -232,11 +232,11 @@ int client_read(uint8_t client) {
 
 // checks to see if a character is a realtime character
 bool is_realtime_command(uint8_t data) {
-    if (data >= 0x80) {
+    if (data >= 0x80 || (char)data == (char)Cmd::JogCancel) {
         return true;
     }
     auto cmd = static_cast<Cmd>(data);
-    return cmd == Cmd::Reset || cmd == Cmd::StatusReport || cmd == Cmd::CycleStart || cmd == Cmd::FeedHold;
+    return cmd == Cmd::Reset || cmd == Cmd::StatusReport || cmd == Cmd::CycleStart || cmd == Cmd::FeedHold || cmd == Cmd::JogCancel;
 }
 
 // Act upon a realtime character

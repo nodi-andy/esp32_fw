@@ -163,22 +163,24 @@ void protocol_main_loop() {
             }
         }
 #endif
+        uint8_t client = CLIENT_SERIAL;
         if (SFS_ready_next) {
             char fileLine[255];
             if (readSFSFileLine(fileLine, 255)) {
                 SFS_ready_next = false;
                 report_status_message(execute_line(fileLine, SFS_client, SFS_auth_level), SFS_client);
+                grbl_sendf(client, "[next:]\r\n");
             } else {
                 char temp[50];
                 sfs_get_current_filename(temp);
-                grbl_notifyf("SD print done", "%s print is successful", temp);
+                grbl_notifyf("SFS print done", "%s print is successful", temp);
                 closeSFSFile();  // close file and clear SD ready/running flags
             }
         }
         // Receive one line of incoming serial data, as the data becomes available.
         // Filtering, if necessary, is done later in gc_execute_line(), so the
         // filtering is the same with serial and file input.
-        uint8_t client = CLIENT_SERIAL;
+
         char*   line;
         for (client = 0; client < CLIENT_COUNT; client++) {
             while ((c = client_read(client)) != -1) {

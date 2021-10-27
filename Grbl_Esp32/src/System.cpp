@@ -363,6 +363,8 @@ void __attribute__((weak)) user_defined_macro(uint8_t index) {
             return;
     }
 
+    WebUI::inputBuffer.push("[ESP700]macro0.g\r\n");
+
     if (user_macro == "") {
         grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro User/Macro%d empty", index);
         return;
