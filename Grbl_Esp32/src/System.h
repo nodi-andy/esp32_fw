@@ -147,7 +147,6 @@ void system_ini();  // Renamed from system_init() due to conflict with esp32 fil
 
 // Returns bitfield of control pin states, organized by CONTROL_PIN_INDEX. (1=triggered, 0=not triggered).
 ControlPins system_control_get_state();
-ControlPins system_control_get_neg_state();
 
 // Returns if safety door is ajar(T) or closed(F), based on pin state.
 uint8_t system_check_safety_door_ajar();
@@ -171,8 +170,7 @@ float* system_get_mpos();
 
 // A task that runs after a control switch interrupt for debouncing.
 void controlCheckTask(void* pvParameters);
-void system_exec_control_pin(ControlPins pins);
-void system_exec_control_pin_neg(ControlPins pins);
+void system_exec_control_pin(ControlPins pins, ControlPins currentPins);
 
 bool sys_set_digital(uint8_t io_num, bool turnOn);
 void sys_digital_all_off();

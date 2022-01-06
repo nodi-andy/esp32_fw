@@ -572,7 +572,7 @@ void report_build_info(const char* line, uint8_t client) {
 // Prints the character string line Grbl has received from the user, which has been pre-parsed,
 // and has been sent into protocol_execute_line() routine to be executed by Grbl.
 void report_echo_line_received(char* line, uint8_t client) {
-    grbl_sendf(client, "[echo: %s]\r\n", line);
+    grbl_sendf(client, ">%s\r\n", line);
 }
 
 // Calculate the position for status reports.

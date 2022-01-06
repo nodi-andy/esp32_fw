@@ -29,7 +29,7 @@ boolean closeSFSFile() {
     sfs_current_line_number = 0;
     mySFSFile.close();
     set_sfs_state(SDState::Idle);
-    grbl_sendf(CLIENT_ALL, "[closeFile:]\r\n");
+    //grbl_sendf(CLIENT_ALL, "[closeFile:]\r\n");
     return true;
 }
 

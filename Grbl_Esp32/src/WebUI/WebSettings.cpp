@@ -165,6 +165,7 @@ namespace WebUI {
 
 Error WebCommand::action(char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESPResponseStream* out) {
     if( sys.state == State::Jog) {
+        grbl_send(CLIENT_SERIAL, "[MSG:Jog Interrupted]\r\n");
         execute_realtime_command(Cmd::JogCancel, CLIENT_ALL);
         protocol_execute_realtime();
         closeSFSFile();

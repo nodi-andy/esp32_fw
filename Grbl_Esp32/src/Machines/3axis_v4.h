@@ -44,13 +44,13 @@
 // OK to comment out to use pin for other features
 #define STEPPERS_DISABLE_PIN    GPIO_NUM_12
 
-#define SPINDLE_TYPE            SpindleType::PWM
-#define SPINDLE_OUTPUT_PIN      GPIO_NUM_19   // labeled SpinPWM
-#define SPINDLE_ENABLE_PIN      GPIO_NUM_18  // labeled SpinEnbl
+#define SPINDLE_TYPE            SpindleType::RELAY
+//#define SPINDLE_OUTPUT_PIN      GPIO_NUM_19   // labeled SpinPWM
+#define SPINDLE_ENABLE_PIN      GPIO_NUM_19  // labeled SpinEnbl
 #define COOLANT_FLOOD_PIN       GPIO_NUM_34  // labeled Flood
 //#define COOLANT_MIST_PIN        GPIO_NUM_34  // labeled Mist
 
-//#define PROBE_PIN               GPIO_NUM_2  // labeled Probe
+#define PROBE_PIN               GPIO_NUM_18  // labeled Probe
 //#define CONTROL_FEED_HOLD_PIN   GPIO_NUM_4  // labeled Hold,  needs external pullup
 #define MACRO_BUTTON_0_PIN      GPIO_NUM_4
 //#define CONTROL_CYCLE_START_PIN GPIO_NUM_36  // labeled Start, needs external pullup

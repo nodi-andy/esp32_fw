@@ -345,8 +345,8 @@ namespace SpindleSpeedOverride {
 // NOTE: WCO refresh must be 2 or greater. OVR refresh must be 1 or greater.
 const int REPORT_OVR_REFRESH_BUSY_COUNT = 20;  // (1-255)
 const int REPORT_OVR_REFRESH_IDLE_COUNT = 10;  // (1-255) Must be less than or equal to the busy count
-const int REPORT_WCO_REFRESH_BUSY_COUNT = 30;  // (2-255)
-const int REPORT_WCO_REFRESH_IDLE_COUNT = 10;  // (2-255) Must be less than or equal to the busy count
+const int REPORT_WCO_REFRESH_BUSY_COUNT = 2;  // (2-255)
+const int REPORT_WCO_REFRESH_IDLE_COUNT = 2;  // (2-255) Must be less than or equal to the busy count
 
 // The temporal resolution of the acceleration management subsystem. A higher number gives smoother
 // acceleration, particularly noticeable on machines that run at very high feedrates, but may negatively
@@ -399,7 +399,7 @@ const int TOOL_LENGTH_OFFSET_AXIS = Z_AXIS;  // Default z-axis. Valid values are
 // This is similar to REPORT_ECHO_LINE_RECEIVED and subject to all its caveats,
 // but instead of echoing the pre-parsed line, it echos the raw line exactly as
 // received, including not only GCode lines, but also $ and [ESP commands.
-#define REPORT_ECHO_RAW_LINE_RECEIVED // Default disabled. Uncomment to enable.
+//#define REPORT_ECHO_RAW_LINE_RECEIVED // Default disabled. Uncomment to enable.
 
 // Minimum planner junction speed. Sets the default minimum junction speed the planner plans to at
 // every buffer block junction, except for starting from rest and end of the buffer, which are always

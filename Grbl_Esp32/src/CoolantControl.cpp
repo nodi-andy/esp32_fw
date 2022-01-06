@@ -82,6 +82,7 @@ static inline void coolant_write(CoolantState state) {
 #    ifdef INVERT_COOLANT_FLOOD_PIN
     pinState = !pinState;
 #    endif
+    grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Flood: %d", pinState);
     digitalWrite(COOLANT_FLOOD_PIN, pinState);
 #endif
 
@@ -90,6 +91,7 @@ static inline void coolant_write(CoolantState state) {
 #    ifdef INVERT_COOLANT_MIST_PIN
     pinState = !pinState;
 #    endif
+    grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Mist: %d", pinState);
     digitalWrite(COOLANT_MIST_PIN, pinState);
 #endif
 }
