@@ -2,6 +2,7 @@
 #include <map>
 #include "Regex.h"
 
+extern bool sfs_jump_to_label(const char* label);
 // WG Readable and writable as guest
 // WU Readable and writable as user and admin
 // WA Readable as user and admin, writable as admin
@@ -422,6 +423,116 @@ Error motor_disable(const char* value, WebUI::AuthenticationLevel auth_level, We
     return Error::Ok;
 }
 
+// Trim helpers
+static inline char* ltrim_ascii(char* s) { while (*s==' '||*s=='\t') ++s; return s; }
+static inline void  rtrim_ascii(char* s) { char* e=s+strlen(s); while (e>s && (unsigned char)e[-1]<= ' ') --e; *e='\0'; }
+
+// Map axis letter -> index
+static int axis_index(char a) {
+    switch (toupper(a)) { case 'X': return X_AXIS; case 'Y': return Y_AXIS; case 'Z': return Z_AXIS; default: return -1; }
+}
+
+// Parse a relational operator at *p and advance p
+enum RelOp { LT, LE, GT, GE, EQ, NE, BAD };
+static RelOp parse_op(const char** p) {
+    const char* s = *p;
+    if      (s[0]=='<' && s[1]=='=') { *p=s+2; return LE; }
+    else if (s[0]=='>' && s[1]=='=') { *p=s+2; return GE; }
+    else if (s[0]=='!' && s[1]=='=') { *p=s+2; return NE; }
+    else if (s[0]=='=' && s[1]=='=') { *p=s+2; return EQ; }
+    else if (s[0]=='<')               { *p=s+1; return LT; }
+    else if (s[0]=='>')               { *p=s+1; return GT; }
+    return BAD;
+}
+
+Error jump_to_label_cmd(const char* value,
+                        WebUI::AuthenticationLevel /*auth_level*/,
+                        WebUI::ESPResponseStream* out)
+{
+    uint8_t client = out ? out->client() : CLIENT_SERIAL;
+
+    if (!value) {
+        grbl_sendf(client, "error: invalid statement\r\n");
+        return Error::InvalidStatement;
+    }
+
+    // Work on a mutable copy
+    char buf[160];
+    strncpy(buf, value, sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
+    char* p = ltrim_ascii(buf);
+    if (*p=='=') { ++p; p = ltrim_ascii(p); }   // allow $JMP=...
+
+    bool do_jump = true;
+
+    // Optional condition: (X<123.45)
+    if (*p == '(') {
+        ++p; p = ltrim_ascii(p);
+        if (!*p) { grbl_sendf(client, "error: missing condition\r\n"); return Error::InvalidValue; }
+
+        int ax = axis_index(*p++);
+        if (ax < 0) { grbl_sendf(client, "error: axis must be X/Y/Z\r\n"); return Error::InvalidValue; }
+
+        p = ltrim_ascii(p);
+        RelOp op = parse_op((const char**)&p);
+        if (op == BAD) { grbl_sendf(client, "error: bad operator\r\n"); return Error::InvalidValue; }
+
+        p = ltrim_ascii(p);
+        char* endptr = nullptr;
+        double rhs = strtod(p, &endptr);
+        if (endptr == p) { grbl_sendf(client, "error: bad number\r\n"); return Error::InvalidValue; }
+        p = endptr; p = ltrim_ascii(p);
+
+        if (*p != ')') { grbl_sendf(client, "error: missing ')'\r\n"); return Error::InvalidValue; }
+        ++p; // past ')'
+
+        protocol_buffer_synchronize();   
+        // Evaluate against MACHINE position (mm)
+        float* mpos = system_get_mpos();  // machine coordinates in mm
+        double lhs = mpos[ax];
+        bool res = false;
+        switch (op) {
+            case LT: res = (lhs <  rhs); break;
+            case LE: res = (lhs <= rhs); break;
+            case GT: res = (lhs >  rhs); break;
+            case GE: res = (lhs >= rhs); break;
+            case EQ: res = (lhs == rhs); break;
+            case NE: res = (lhs != rhs); break;
+            default: break;
+        }
+        do_jump = res;
+    }
+
+    // After optional condition, parse the label token
+    p = ltrim_ascii(p);
+    if (*p=='=') { ++p; p = ltrim_ascii(p); }   // allow "(cond) =label" too
+
+    char label[96] = {0};
+    size_t li = 0;
+    while (*p && !isspace((unsigned char)*p)) {
+        if (li < sizeof(label)-1) label[li++] = *p;
+        ++p;
+    }
+    label[li] = '\0';
+    if (!label[0]) {
+        grbl_sendf(client, "error: missing label\r\n");
+        return Error::InvalidStatement;
+    }
+
+    if (!do_jump) {
+        grbl_sendf(client, "ok: JMP condition false; no jump\r\n");
+        return Error::Ok;
+    }
+
+    if (!sfs_jump_to_label(label)) {
+        grbl_sendf(client, "error: label not found: %s\r\n", label);
+        return Error::InvalidStatement;
+    }
+
+    grbl_sendf(client, "ok: jumped to %s\r\n", label);
+    return Error::Ok;
+}
+
 // Commands use the same syntax as Settings, but instead of setting or
 // displaying a persistent value, a command causes some action to occur.
 // That action could be anything, from displaying a run-time parameter
@@ -448,6 +559,7 @@ void make_grbl_commands() {
     new GrblCommand("#", "GCode/Offsets", report_ngc, idleOrAlarm);
     new GrblCommand("H", "Home", home_all, idleOrAlarm);
     new GrblCommand("MD", "Motor/Disable", motor_disable, idleOrAlarm);
+    new GrblCommand("JMP",   "Jump to label in current macro", jump_to_label_cmd, anyState);
 
 #ifdef HOMING_SINGLE_AXIS_COMMANDS
     new GrblCommand("HX", "Home/X", home_x, idleOrAlarm);
