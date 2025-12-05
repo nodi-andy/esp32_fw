@@ -115,7 +115,7 @@ void protocol_main_loop() {
 #ifdef CHECK_LIMITS_AT_INIT
     if (hard_limits->get()) {
         if (limits_get_state()) {
-            sys.state = State::Alarm;  // Ensure alarm state is active.
+            system_set_state(State::Alarm);  // Ensure alarm state is active.
             report_feedback_message(Message::CheckLimits);
         }
     }
@@ -125,10 +125,10 @@ void protocol_main_loop() {
     // Re-initialize the sleep state as an ALARM mode to ensure user homes or acknowledges.
     if (sys.state == State::Alarm || sys.state == State::Sleep) {
         report_feedback_message(Message::AlarmLock);
-        sys.state = State::Alarm;  // Ensure alarm state is set.
+        system_set_state(State::Alarm);  // Ensure alarm state is set.
     } else {
         // Check if the safety door is open.
-        sys.state = State::Idle;
+        system_set_state(State::Idle);
         if (system_check_safety_door_ajar()) {
             sys_rt_exec_state.bit.safetyDoor = true;
             protocol_execute_realtime();  // Enter safety door mode. Should return as IDLE state.
@@ -295,7 +295,7 @@ void protocol_auto_cycle_start() {
 // also provides a controlled way to execute certain tasks without having two or more instances of
 // the same task, such as the planner recalculating the buffer upon a feedhold or overrides.
 // NOTE: The sys_rt_exec_state.bit variable flags are set by any process, step or serial interrupts, pinouts,
-// limit switches, or the main program.
+ //limit switches, or the main program.
 void protocol_execute_realtime() {
     protocol_exec_rt_system();
     if (sys.suspend.value) {
@@ -308,11 +308,18 @@ void protocol_execute_realtime() {
 // NOTE: Do not alter this unless you know exactly what you are doing!
 void protocol_exec_rt_system() {
     ExecAlarm alarm = sys_rt_exec_alarm;  // Temp variable to avoid calling volatile multiple times.
+    static State last_sys_state = State::Alarm;
+
+    if (report_on_state_change->get() && sys.state != last_sys_state) {
+        report_realtime_status(CLIENT_ALL);
+        last_sys_state = sys.state;
+    }
+
     if (alarm != ExecAlarm::None) {       // Enter only if an alarm is pending
         // System alarm. Everything has shutdown by something that has gone severely wrong. Report
         // the source of the error to the user. If critical, Grbl disables by entering an infinite
         // loop until system reset/abort.
-        sys.state = State::Alarm;  // Set system alarm state
+        system_set_state(State::Alarm);  // Set system alarm state
         report_alarm_message(alarm);
         // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
         if ((alarm == ExecAlarm::HardLimit) || (alarm == ExecAlarm::SoftLimit)) {
@@ -379,7 +386,7 @@ void protocol_exec_rt_system() {
                 if (rt_exec_state.bit.feedHold) {
                     // Block SAFETY_DOOR, JOG, and SLEEP states from changing to HOLD state.
                     if (!(sys.state == State::SafetyDoor || sys.state == State::Jog || sys.state == State::Sleep)) {
-                        sys.state = State::Hold;
+                        system_set_state(State::Hold);
                     }
                     sys_rt_exec_state.bit.feedHold = false;
                 }
@@ -411,7 +418,7 @@ void protocol_exec_rt_system() {
                             }
                         }
                         if (sys.state != State::Sleep) {
-                            sys.state = State::SafetyDoor;
+                            system_set_state(State::SafetyDoor);
                         }
                         sys_rt_exec_state.bit.safetyDoor = false;
                     }
@@ -437,7 +444,7 @@ void protocol_exec_rt_system() {
                 // Resume door state when parking motion has retracted and door has been closed.
                 if (sys.state == State::SafetyDoor && !(sys.suspend.bit.safetyDoorAjar)) {
                     if (sys.suspend.bit.restoreComplete) {
-                        sys.state = State::Idle;  // Set to IDLE to immediately resume the cycle.
+                        system_set_state(State::Idle);  // Set to IDLE to immediately resume the cycle.
                     } else if (sys.suspend.bit.retractComplete) {
                         // Flag to re-energize powered components and restore original position, if disabled by SAFETY_DOOR.
                         // NOTE: For a safety door to resume, the switch must be closed, as indicated by HOLD state, and
@@ -456,12 +463,12 @@ void protocol_exec_rt_system() {
                         sys.step_control = {};  // Restore step control to normal operation
                         if (plan_get_current_block() && !sys.suspend.bit.motionCancel) {
                             sys.suspend.value = 0;  // Break suspend state.
-                            sys.state         = State::Cycle;
+                            system_set_state(State::Cycle);
                             st_prep_buffer();  // Initialize step segment buffer before beginning cycle.
                             st_wake_up();
                         } else {                    // Otherwise, do nothing. Set and resume IDLE state.
                             sys.suspend.value = 0;  // Break suspend state.
-                            sys.state         = State::Idle;
+                            system_set_state(State::Idle);
                         }
                     }
                 }
@@ -497,10 +504,10 @@ void protocol_exec_rt_system() {
                 if (sys.suspend.bit.safetyDoorAjar) {  // Only occurs when safety door opens during jog.
                     sys.suspend.bit.jogCancel    = false;
                     sys.suspend.bit.holdComplete = true;
-                    sys.state                    = State::SafetyDoor;
+                    system_set_state(State::SafetyDoor);
                 } else {
                     sys.suspend.value = 0;
-                    sys.state         = State::Idle;
+                    system_set_state(State::Idle);
                 }
             }
             cycle_stop = false;

@@ -244,6 +244,8 @@ void execute_realtime_command(Cmd command, uint8_t client) {
     switch (command) {
         case Cmd::Reset:
             grbl_msg_sendf(CLIENT_ALL, MsgLevel::Debug, "Cmd::Reset");
+            closeSFSFile();                        
+            client_reset_read_buffer(CLIENT_ALL); 
             mc_reset();  // Call motion control reset routine.
             break;
         case Cmd::StatusReport:

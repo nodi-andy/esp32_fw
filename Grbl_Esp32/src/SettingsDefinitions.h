@@ -1,5 +1,6 @@
 #pragma once
 
+extern FlagSetting* report_on_state_change;
 extern FlagSetting* verbose_errors;
 
 extern FakeSetting<int>* number_axis;

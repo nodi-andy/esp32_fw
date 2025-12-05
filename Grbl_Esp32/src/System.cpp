@@ -69,24 +69,52 @@ void system_ini() {  // Renamed from system_init() due to conflict with esp32 fi
 #endif
 #ifdef MACRO_BUTTON_0_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 0 %s", pinName(MACRO_BUTTON_0_PIN).c_str());
-    pinMode(MACRO_BUTTON_0_PIN, INPUT_PULLUP);
+    pinMode(MACRO_BUTTON_0_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_0_PIN), isr_control_inputs, CHANGE);
 #endif
 #ifdef MACRO_BUTTON_1_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 1 %s", pinName(MACRO_BUTTON_1_PIN).c_str());
-    pinMode(MACRO_BUTTON_1_PIN, INPUT_PULLUP);
+    pinMode(MACRO_BUTTON_1_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_1_PIN), isr_control_inputs, CHANGE);
 #endif
 #ifdef MACRO_BUTTON_2_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 2 %s", pinName(MACRO_BUTTON_2_PIN).c_str());
-    pinMode(MACRO_BUTTON_2_PIN, INPUT_PULLUP);
+    pinMode(MACRO_BUTTON_2_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_2_PIN), isr_control_inputs, CHANGE);
 #endif
 #ifdef MACRO_BUTTON_3_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 3 %s", pinName(MACRO_BUTTON_3_PIN).c_str());
-    pinMode(MACRO_BUTTON_3_PIN, INPUT_PULLUP);
+    pinMode(MACRO_BUTTON_3_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_3_PIN), isr_control_inputs, CHANGE);
 #endif
+#ifdef HOMING_PIN
+    grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Homing Pin %s", pinName(HOMING_PIN).c_str());
+    pinMode(HOMING_PIN, INPUT_PULLDOWN);
+    attachInterrupt(digitalPinToInterrupt(HOMING_PIN), isr_control_inputs, CHANGE);
+#endif
+#ifdef UNLOCK_PIN
+    grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Unlock Pin %s", pinName(UNLOCK_PIN).c_str());
+    pinMode(UNLOCK_PIN, INPUT_PULLDOWN);
+    attachInterrupt(digitalPinToInterrupt(UNLOCK_PIN), isr_control_inputs, CHANGE);
+#endif
+
+#ifdef STATUS_IDLE_PIN
+    pinMode(STATUS_IDLE_PIN, OUTPUT);
+    digitalWrite(STATUS_IDLE_PIN, LOW);
+#endif
+#ifdef STATUS_RUN_PIN
+    pinMode(STATUS_RUN_PIN, OUTPUT);
+    digitalWrite(STATUS_RUN_PIN, LOW);
+#endif
+#ifdef STATUS_HOLD_PIN
+    pinMode(STATUS_HOLD_PIN, OUTPUT);
+    digitalWrite(STATUS_HOLD_PIN, LOW);
+#endif
+#ifdef STATUS_ALARM_PIN
+    pinMode(STATUS_ALARM_PIN, OUTPUT);
+    digitalWrite(STATUS_ALARM_PIN, LOW);
+#endif
+
 #ifdef ENABLE_CONTROL_SW_DEBOUNCE
     // setup task used for debouncing
     control_sw_queue = xQueueCreate(10, sizeof(int));
@@ -256,6 +284,18 @@ ControlPins system_control_get_state() {
         pin_states.bit.macro3 = true;
     }
 #endif
+#ifdef HOMING_PIN
+    defined_pins.bit.homing = true;
+    if (digitalRead(HOMING_PIN)) {
+        pin_states.bit.homing = true;
+    }
+#endif
+#ifdef UNLOCK_PIN
+    defined_pins.bit.unlock = true;
+    if (digitalRead(UNLOCK_PIN)) {
+        pin_states.bit.unlock = true;
+    }
+#endif
 #ifdef INVERT_CONTROL_PIN_MASK
     pin_states.value ^= (INVERT_CONTROL_PIN_MASK & defined_pins.value);
 #endif
@@ -282,6 +322,16 @@ void system_exec_control_pin(ControlPins pins, ControlPins currentPins) {
         user_defined_macro(2, currentPins.bit.macro2);  // function must be implemented by user
     } else if (pins.bit.macro3) {
         user_defined_macro(3, currentPins.bit.macro3);  // function must be implemented by user
+    } else if (pins.bit.homing) {
+        if (currentPins.bit.homing) {
+             WebUI::inputBuffer.push("$H\n");
+             grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Homing via control pin");
+        }
+    } else if (pins.bit.unlock) {
+        if (currentPins.bit.unlock) {
+             WebUI::inputBuffer.push("$X\n");
+             grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Unlock via control pin");
+        }
     }
 }
 
@@ -359,7 +409,7 @@ void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
         case 0:
             user_macro = user_macro0->get();
             if (dir) {
-                WebUI::inputBuffer.push("[ESP700]F1u\r\n");
+                WebUI::inputBuffer.push("[ESP700]/macro1.g\r\n");
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 1 up");
             } else {
                 WebUI::inputBuffer.push("[ESP700]F1\r\n");
@@ -369,7 +419,7 @@ void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
         case 1:
             user_macro = user_macro1->get();
             if (dir) {
-                WebUI::inputBuffer.push("[ESP700]F2u\r\n");
+                WebUI::inputBuffer.push("[ESP700]/macro2.g\r\n");
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 2 up");
             } else {
                 WebUI::inputBuffer.push("[ESP700]F2\r\n");
@@ -409,4 +459,71 @@ void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
     user_macro.toCharArray(line, 255, 0);
     strcat(line, "\r");
     WebUI::inputBuffer.push(line);*/
+}
+
+const char* system_get_state_name(State state) {
+    switch (state) {
+        case State::Idle: return "Idle";
+        case State::Alarm: return "Alarm";
+        case State::CheckMode: return "CheckMode";
+        case State::Homing: return "Homing";
+        case State::Cycle: return "Cycle";
+        case State::Hold: return "Hold";
+        case State::Jog: return "Jog";
+        case State::SafetyDoor: return "SafetyDoor";
+        case State::Sleep: return "Sleep";
+    }
+    return "Unknown";
+}
+
+void set_status_pins(State state) {
+#ifdef STATUS_IDLE_PIN
+    digitalWrite(STATUS_IDLE_PIN, LOW);
+#endif
+#ifdef STATUS_RUN_PIN
+    digitalWrite(STATUS_RUN_PIN, LOW);
+#endif
+#ifdef STATUS_HOLD_PIN
+    digitalWrite(STATUS_HOLD_PIN, LOW);
+#endif
+#ifdef STATUS_ALARM_PIN
+    digitalWrite(STATUS_ALARM_PIN, LOW);
+#endif
+
+    switch (state) {
+        case State::Idle:
+#ifdef STATUS_IDLE_PIN
+            digitalWrite(STATUS_IDLE_PIN, HIGH);
+#endif
+            break;
+        case State::Cycle:
+        case State::Homing:
+        case State::Jog:
+#ifdef STATUS_RUN_PIN
+            digitalWrite(STATUS_RUN_PIN, HIGH);
+#endif
+            break;
+        case State::Hold:
+        case State::SafetyDoor:
+#ifdef STATUS_HOLD_PIN
+            digitalWrite(STATUS_HOLD_PIN, HIGH);
+#endif
+            break;
+        case State::Alarm:
+#ifdef STATUS_ALARM_PIN
+            digitalWrite(STATUS_ALARM_PIN, HIGH);
+#endif
+            break;
+        default:
+            // In other states like CheckMode and Sleep, all pins are off.
+            break;
+    }
+}
+
+void system_set_state(State new_state) {
+    if (new_state != sys.state) {
+        sys.state = new_state;
+        set_status_pins(new_state);
+        grbl_msg_sendf(CLIENT_ALL, MsgLevel::Info, "State: %s", system_get_state_name(new_state));
+    }
 }

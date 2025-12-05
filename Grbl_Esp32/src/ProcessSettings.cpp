@@ -200,7 +200,7 @@ Error toggle_check_mode(const char* value, WebUI::AuthenticationLevel auth_level
         if (sys.state != State::Idle) {
             return Error::IdleError;  // Requires no alarm mode.
         }
-        sys.state = State::CheckMode;
+        system_set_state(State::CheckMode);
         report_feedback_message(Message::Enabled);
     }
     return Error::Ok;
@@ -212,8 +212,7 @@ Error disable_alarm_lock(const char* value, WebUI::AuthenticationLevel auth_leve
             return Error::CheckDoor;
         }
         report_feedback_message(Message::AlarmUnlock);
-        sys.state = State::Idle;
-        // Don't run startup script. Prevents stored moves in startup from causing accidents.
+        system_set_state(State::Idle);        // Don't run startup script. Prevents stored moves in startup from causing accidents.
     }  // Otherwise, no effect.
     return Error::Ok;
 }
@@ -228,7 +227,7 @@ Error home(int cycle) {
     if (system_check_safety_door_ajar()) {
         return Error::CheckDoor;  // Block if safety door is ajar.
     }
-    sys.state = State::Homing;  // Set system state variable
+    system_set_state(State::Homing);  // Set system state variable
 #ifdef USE_I2S_STEPS
     stepper_id_t save_stepper = current_stepper;
     if (save_stepper == ST_I2S_STREAM) {
@@ -244,7 +243,7 @@ Error home(int cycle) {
     mc_homing_cycle(cycle);
 #endif
     if (!sys.abort) {             // Execute startup scripts after successful homing.
-        sys.state = State::Idle;  // Set to IDLE when complete.
+        system_set_state(State::Idle);  // Set to IDLE when complete.
         st_go_idle();             // Set steppers to the settings idle state before returning.
         if (cycle == HOMING_CYCLE_ALL) {
             char line[128];

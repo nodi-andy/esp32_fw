@@ -46,10 +46,9 @@ void grbl_init() {
     machine_init();                                 // weak definition in Grbl.cpp does nothing
     // Initialize system state.
 #ifdef FORCE_INITIALIZATION_ALARM
-    // Force Grbl into an ALARM state upon a power-cycle or hard reset.
-    sys.state = State::Alarm;
+    system_set_state(State::Alarm);
 #else
-    sys.state = State::Idle;
+    system_set_state(State::Idle);
 #endif
     // Check for power-up and set system alarm if homing is enabled to force homing cycle
     // by setting Grbl's alarm state. Alarm locks out all g-code commands, including the
@@ -60,7 +59,7 @@ void grbl_init() {
     // things uncontrollably. Very bad.
 #ifdef HOMING_INIT_LOCK
     if (homing_enable->get()) {
-        sys.state = State::Alarm;
+        system_set_state(State::Alarm);
     }
 #endif
     Spindles::Spindle::select();
@@ -77,7 +76,7 @@ static void reset_variables() {
     // Reset system variables.
     State prior_state = sys.state;
     memset(&sys, 0, sizeof(system_t));  // Clear system struct variable.
-    sys.state             = prior_state;
+    system_set_state(prior_state);
     sys.f_override        = FeedOverride::Default;              // Set to 100%
     sys.r_override        = RapidOverride::Default;             // Set to 100%
     sys.spindle_speed_ovr = SpindleSpeedOverride::Default;      // Set to 100%
@@ -105,8 +104,8 @@ static void reset_variables() {
     plan_sync_position();
     gc_sync_position();
     report_init_message(CLIENT_ALL);
-    pinMode(SYS_RUNNING, OUTPUT);
-    digitalWrite(SYS_RUNNING, true);
+    /*pinMode(SYS_RUNNING, OUTPUT);
+    digitalWrite(SYS_RUNNING, true);*/
 
     // used to keep track of a jog command sent to mc_line() so we can cancel it.
     // this is needed if a jogCancel comes along after we have already parsed a jog and it is in-flight.
