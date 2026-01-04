@@ -116,10 +116,10 @@ struct ControlPinBits {
     uint8_t reset : 1;
     uint8_t feedHold : 1;
     uint8_t cycleStart : 1;
-    uint8_t macro0 : 1;
     uint8_t macro1 : 1;
     uint8_t macro2 : 1;
     uint8_t macro3 : 1;
+    uint8_t macro4 : 1;
     uint8_t homing : 1;
     uint8_t unlock : 1;
 };

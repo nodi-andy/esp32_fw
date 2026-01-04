@@ -31,8 +31,8 @@
 //#define COOLANT_MIST_PIN        GPIO_NUM_34  // labeled Mist
 
 //#define PROBE_PIN               GPIO_NUM_18  // labeled Probe
-#define MACRO_BUTTON_0_PIN      GPIO_NUM_5
-#define MACRO_BUTTON_1_PIN      GPIO_NUM_18
+#define MACRO_BUTTON_1_PIN      GPIO_NUM_5
+#define MACRO_BUTTON_2_PIN      GPIO_NUM_18
 #define CONTROL_FEED_HOLD_PIN   GPIO_NUM_22  // labeled Hold,  needs external pullup
 #define CONTROL_CYCLE_START_PIN GPIO_NUM_23  // labeled Start, needs external pullup
 
@@ -45,3 +45,9 @@
 #define STATUS_RUN_PIN GPIO_NUM_4
 #define STATUS_HOLD_PIN GPIO_NUM_16
 #define STATUS_ALARM_PIN GPIO_NUM_17
+
+// Secondary serial mirror to provide an extra 19.2k baud port that mirrors Uart0
+#define SERIAL_BRIDGE_UART_NUM 1
+#define SERIAL_BRIDGE_TX_PIN GPIO_NUM_15
+#define SERIAL_BRIDGE_RX_PIN GPIO_NUM_14
+#define SERIAL_BRIDGE_BAUD 19200

@@ -98,10 +98,10 @@ AxisSettings* c_axis_settings;
 
 AxisSettings* axis_settings[MAX_N_AXIS];
 
-StringSetting* user_macro0;
 StringSetting* user_macro1;
 StringSetting* user_macro2;
 StringSetting* user_macro3;
+StringSetting* user_macro4;
 
 typedef struct {
     const char* name;
@@ -226,10 +226,15 @@ static bool checkSpindleChange(char* val) {
 static const char* makeGrblName(int axisNum, int base) {
     // To omit A,B,C axes:
     // if (axisNum > 2) return NULL;
-    char buf[4];
-    snprintf(buf, 4, "%d", axisNum + base);
-    char* retval = (char*)malloc(strlen(buf));
-    return strcpy(retval, buf);
+    char buf[8];  // plenty for three digits and NUL
+    snprintf(buf, sizeof(buf), "%d", axisNum + base);
+    size_t len   = strlen(buf) + 1;  // include NUL terminator
+    char* retval = (char*)malloc(len);
+    if (!retval) {
+        return NULL;
+    }
+    memcpy(retval, buf, len);
+    return retval;
 }
 
 void make_coordinate(CoordIndex index, const char* name) {
@@ -416,10 +421,10 @@ void make_settings() {
     homing_cycle[1] = new AxisMaskSetting(EXTENDED, WG, NULL, "Homing/Cycle1", DEFAULT_HOMING_CYCLE_1);
     homing_cycle[0] = new AxisMaskSetting(EXTENDED, WG, NULL, "Homing/Cycle0", DEFAULT_HOMING_CYCLE_0);
 
+    user_macro4 = new StringSetting(EXTENDED, WG, NULL, "User/Macro4", DEFAULT_USER_MACRO4);
     user_macro3 = new StringSetting(EXTENDED, WG, NULL, "User/Macro3", DEFAULT_USER_MACRO3);
     user_macro2 = new StringSetting(EXTENDED, WG, NULL, "User/Macro2", DEFAULT_USER_MACRO2);
     user_macro1 = new StringSetting(EXTENDED, WG, NULL, "User/Macro1", DEFAULT_USER_MACRO1);
-    user_macro0 = new StringSetting(EXTENDED, WG, NULL, "User/Macro0", DEFAULT_USER_MACRO0);
 
     message_level = +new EnumSetting(NULL, EXTENDED, WG, NULL, "Message/Level", static_cast<int8_t>(MsgLevel::Info), &messageLevels, NULL);
 }

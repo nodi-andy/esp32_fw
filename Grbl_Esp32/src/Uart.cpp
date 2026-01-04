@@ -92,3 +92,4 @@ bool Uart::flushTxTimed(TickType_t ticks) {
 }
 
 Uart Uart0(0);
+Uart UartSecondary(SERIAL_BRIDGE_UART_NUM);

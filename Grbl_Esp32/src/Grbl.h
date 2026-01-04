@@ -110,5 +110,5 @@ bool limitsCheckTravel(float* target);  // weak in Limits.cpp; true if out of ra
 
 void motors_to_cartesian(float* cartestian, float* motors, int n_axis);  // weak definition
 
-// Called if MACRO_BUTTON_0_PIN or MACRO_BUTTON_1_PIN or MACRO_BUTTON_2_PIN is defined
+// Called if MACRO_BUTTON_x_PIN is defined
 void user_defined_macro(uint8_t index, uint8_t dir);

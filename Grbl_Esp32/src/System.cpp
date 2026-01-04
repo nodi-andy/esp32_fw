@@ -59,18 +59,13 @@ void system_ini() {  // Renamed from system_init() due to conflict with esp32 fi
 #endif
 #ifdef CONTROL_FEED_HOLD_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Hold switch on pin %s", pinName(CONTROL_FEED_HOLD_PIN).c_str());
-    pinMode(CONTROL_FEED_HOLD_PIN, INPUT_PULLUP);
+    pinMode(CONTROL_FEED_HOLD_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(CONTROL_FEED_HOLD_PIN), isr_control_inputs, CHANGE);
 #endif
 #ifdef CONTROL_CYCLE_START_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Start switch on pin %s", pinName(CONTROL_CYCLE_START_PIN).c_str());
-    pinMode(CONTROL_CYCLE_START_PIN, INPUT_PULLUP);
+    pinMode(CONTROL_CYCLE_START_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(CONTROL_CYCLE_START_PIN), isr_control_inputs, CHANGE);
-#endif
-#ifdef MACRO_BUTTON_0_PIN
-    grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 0 %s", pinName(MACRO_BUTTON_0_PIN).c_str());
-    pinMode(MACRO_BUTTON_0_PIN, INPUT_PULLDOWN);
-    attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_0_PIN), isr_control_inputs, CHANGE);
 #endif
 #ifdef MACRO_BUTTON_1_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 1 %s", pinName(MACRO_BUTTON_1_PIN).c_str());
@@ -86,6 +81,11 @@ void system_ini() {  // Renamed from system_init() due to conflict with esp32 fi
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 3 %s", pinName(MACRO_BUTTON_3_PIN).c_str());
     pinMode(MACRO_BUTTON_3_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_3_PIN), isr_control_inputs, CHANGE);
+#endif
+#ifdef MACRO_BUTTON_4_PIN
+    grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro Pin 4 %s", pinName(MACRO_BUTTON_4_PIN).c_str());
+    pinMode(MACRO_BUTTON_4_PIN, INPUT_PULLDOWN);
+    attachInterrupt(digitalPinToInterrupt(MACRO_BUTTON_4_PIN), isr_control_inputs, CHANGE);
 #endif
 #ifdef HOMING_PIN
     grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Homing Pin %s", pinName(HOMING_PIN).c_str());
@@ -259,15 +259,9 @@ ControlPins system_control_get_state() {
         pin_states.bit.cycleStart = true;
     }
 #endif
-#ifdef MACRO_BUTTON_0_PIN
-    defined_pins.bit.macro0 = true;
-    //grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "macro0 set: %d", digitalRead(MACRO_BUTTON_0_PIN));
-    if (digitalRead(MACRO_BUTTON_0_PIN)) {
-        pin_states.bit.macro0 = true;
-    }
-#endif
 #ifdef MACRO_BUTTON_1_PIN
     defined_pins.bit.macro1 = true;
+    //grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "macro1 set: %d", digitalRead(MACRO_BUTTON_0_PIN));
     if (digitalRead(MACRO_BUTTON_1_PIN)) {
         pin_states.bit.macro1 = true;
     }
@@ -282,6 +276,12 @@ ControlPins system_control_get_state() {
     defined_pins.bit.macro3 = true;
     if (digitalRead(MACRO_BUTTON_3_PIN)) {
         pin_states.bit.macro3 = true;
+    }
+#endif
+#ifdef MACRO_BUTTON_4_PIN
+    defined_pins.bit.macro4 = true;
+    if (digitalRead(MACRO_BUTTON_4_PIN)) {
+        pin_states.bit.macro4 = true;
     }
 #endif
 #ifdef HOMING_PIN
@@ -314,14 +314,14 @@ void system_exec_control_pin(ControlPins pins, ControlPins currentPins) {
         sys_rt_exec_state.bit.feedHold = true;
     } else if (pins.bit.safetyDoor) {
         sys_rt_exec_state.bit.safetyDoor = true;
-    } else if (pins.bit.macro0) {
-        user_defined_macro(0, currentPins.bit.macro0);  // function must be implemented by user
     } else if (pins.bit.macro1) {
-        user_defined_macro(1, currentPins.bit.macro1);  // function must be implemented by user
+        user_defined_macro(0, currentPins.bit.macro1);  // function must be implemented by user
     } else if (pins.bit.macro2) {
-        user_defined_macro(2, currentPins.bit.macro2);  // function must be implemented by user
+        user_defined_macro(1, currentPins.bit.macro2);  // function must be implemented by user
     } else if (pins.bit.macro3) {
-        user_defined_macro(3, currentPins.bit.macro3);  // function must be implemented by user
+        user_defined_macro(2, currentPins.bit.macro3);  // function must be implemented by user
+    } else if (pins.bit.macro4) {
+        user_defined_macro(3, currentPins.bit.macro4);  // function must be implemented by user
     } else if (pins.bit.homing) {
         if (currentPins.bit.homing) {
              WebUI::inputBuffer.push("$H\n");
@@ -397,17 +397,17 @@ uint8_t sys_calc_pwm_precision(uint32_t freq) {
 }
 
 void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
-    /*// must be in Idle
+    // must be in Idle
     if (sys.state != State::Idle) {
         grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro button only permitted in idle");
         return;
-    }*/
+    }
 
     String user_macro;
     char   line[255];
     switch (index) {
-        case 0:
-            user_macro = user_macro0->get();
+        case 1:
+            user_macro = user_macro1->get();
             if (dir) {
                 WebUI::inputBuffer.push("[ESP700]/macro1.g\r\n");
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 1 up");
@@ -416,8 +416,8 @@ void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 1 down");
             }
             break;
-        case 1:
-            user_macro = user_macro1->get();
+        case 2:
+            user_macro = user_macro2->get();
             if (dir) {
                 WebUI::inputBuffer.push("[ESP700]/macro2.g\r\n");
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 2 up");
@@ -426,8 +426,8 @@ void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 2 down");
             }
             break;
-        case 2:
-            user_macro = user_macro2->get();
+        case 3:
+            user_macro = user_macro3->get();
             if (dir) {
                 WebUI::inputBuffer.push("[ESP700]F3u\r\n");
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 3 up");
@@ -436,8 +436,8 @@ void __attribute__((weak)) user_defined_macro(uint8_t index, uint8_t dir) {
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 3 down");
             }
             break;
-        case 3:
-            user_macro = user_macro3->get();
+        case 4:
+            user_macro = user_macro4->get();
             if (dir) {
                 WebUI::inputBuffer.push("[ESP700]F4u\r\n");
                 grbl_msg_sendf(CLIENT_SERIAL, MsgLevel::Info, "Macro 4 up");

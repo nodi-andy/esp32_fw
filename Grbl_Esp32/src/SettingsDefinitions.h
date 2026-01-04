@@ -65,9 +65,9 @@ extern EnumSetting* spindle_type;
 
 extern AxisMaskSetting* stallguard_debug_mask;
 
-extern StringSetting* user_macro0;
 extern StringSetting* user_macro1;
 extern StringSetting* user_macro2;
 extern StringSetting* user_macro3;
+extern StringSetting* user_macro4;
 
 extern EnumSetting* message_level;

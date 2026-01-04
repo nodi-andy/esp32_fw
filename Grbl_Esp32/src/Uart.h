@@ -47,3 +47,4 @@ public:
 };
 
 extern Uart Uart0;
+extern Uart UartSecondary;

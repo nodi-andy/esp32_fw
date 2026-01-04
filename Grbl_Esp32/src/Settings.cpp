@@ -2,6 +2,7 @@
 #include "WebUI/JSONEncoder.h"
 #include <map>
 #include <nvs.h>
+#include <nvs_flash.h>
 
 bool anyState() {
     return false;
@@ -68,10 +69,23 @@ Error Setting::check(char* s) {
 nvs_handle Setting::_handle = 0;
 
 void Setting::init() {
-    if (!_handle) {
-        if (esp_err_t err = nvs_open("Grbl_ESP32", NVS_READWRITE, &_handle)) {
-            grbl_sendf(CLIENT_SERIAL, "nvs_open failed with error %d\r\n", err);
-        }
+    if (_handle) {
+        return;
+    }
+
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        nvs_flash_erase();
+        err = nvs_flash_init();
+    }
+    if (err) {
+        grbl_sendf(CLIENT_SERIAL, "nvs_flash_init failed with error %d\r\n", err);
+        return;
+    }
+
+    if ((err = nvs_open("Grbl_ESP32", NVS_READWRITE, &_handle))) {
+        grbl_sendf(CLIENT_SERIAL, "nvs_open failed with error %d\r\n", err);
+        _handle = 0;
     }
 }
 
@@ -727,6 +741,9 @@ Error GrblCommand::action(char* value, WebUI::AuthenticationLevel auth_level, We
 Coordinates* coords[CoordIndex::End];
 
 bool Coordinates::load() {
+    if (!Setting::_handle) {
+        return false;
+    }
     size_t len;
     switch (nvs_get_blob(Setting::_handle, _name, _currentValue, &len)) {
         case ESP_OK:
@@ -751,5 +768,8 @@ void Coordinates::set(float value[MAX_N_AXIS]) {
 #ifdef FORCE_BUFFER_SYNC_DURING_NVS_WRITE
     protocol_buffer_synchronize();
 #endif
+    if (!Setting::_handle) {
+        return;
+    }
     nvs_set_blob(Setting::_handle, _name, _currentValue, sizeof(_currentValue));
 }

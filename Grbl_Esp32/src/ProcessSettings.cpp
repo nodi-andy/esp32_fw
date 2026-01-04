@@ -290,6 +290,35 @@ Error report_startup_lines(const char* value, WebUI::AuthenticationLevel auth_le
     return Error::Ok;
 }
 
+Error run_macro_command(uint8_t index, const char* value, WebUI::AuthenticationLevel /*auth_level*/, WebUI::ESPResponseStream* out) {
+    uint8_t dir = 1;  // default to "pressed" behavior
+    if (value && *value) {
+        if (strlen(value) == 1 && (*value == '0' || *value == '1')) {
+            dir = *value - '0';
+        } else {
+            return Error::InvalidStatement;
+        }
+    }
+    user_defined_macro(index, dir);
+    return Error::Ok;
+}
+
+Error run_macro1(const char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESPResponseStream* out) {
+    return run_macro_command(1, value, auth_level, out);
+}
+
+Error run_macro2(const char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESPResponseStream* out) {
+    return run_macro_command(2, value, auth_level, out);
+}
+
+Error run_macro3(const char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESPResponseStream* out) {
+    return run_macro_command(3, value, auth_level, out);
+}
+
+Error run_macro4(const char* value, WebUI::AuthenticationLevel auth_level, WebUI::ESPResponseStream* out) {
+    return run_macro_command(4, value, auth_level, out);
+}
+
 std::map<const char*, uint8_t, cmp_str> restoreCommands = {
 #ifdef ENABLE_RESTORE_DEFAULT_SETTINGS
     { "$", SettingsRestore::Defaults },   { "settings", SettingsRestore::Defaults },
@@ -555,6 +584,10 @@ void make_grbl_commands() {
     new GrblCommand("X", "Alarm/Disable", disable_alarm_lock, anyState);
     new GrblCommand("NVX", "Settings/Erase", Setting::eraseNVS, idleOrAlarm, WA);
     new GrblCommand("V", "Settings/Stats", Setting::report_nvs_stats, idleOrAlarm);
+    new GrblCommand("M1", "Macro/0", run_macro1, anyState);
+    new GrblCommand("M2", "Macro/1", run_macro2, anyState);
+    new GrblCommand("M3", "Macro/2", run_macro3, anyState);
+    new GrblCommand("M4", "Macro/3", run_macro4, anyState);
     new GrblCommand("#", "GCode/Offsets", report_ngc, idleOrAlarm);
     new GrblCommand("H", "Home", home_all, idleOrAlarm);
     new GrblCommand("MD", "Motor/Disable", motor_disable, idleOrAlarm);

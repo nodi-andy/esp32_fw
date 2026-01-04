@@ -72,9 +72,19 @@ WebUI::InputBuffer client_buffer[CLIENT_COUNT];  // create a buffer for each cli
 // Returns the number of bytes available in a client buffer.
 uint8_t client_get_rx_buffer_available(uint8_t client) {
 #ifdef REVERT_TO_ARDUINO_SERIAL
-    return 128 - Serial.available();
+    size_t pending = Serial.available();
+    size_t secondary_pending = SECONDARY_HW_SERIAL.available();
+    if (secondary_pending > pending) {
+        pending = secondary_pending;
+    }
+    return 128 - pending;
 #else
-    return 128 - Uart0.available();
+    size_t pending = Uart0.available();
+    size_t secondary_pending = UartSecondary.available();
+    if (secondary_pending > pending) {
+        pending = secondary_pending;
+    }
+    return 128 - pending;
 #endif
     //    return client_buffer[client].availableforwrite();
 }
@@ -104,14 +114,19 @@ void client_init() {
 
 #ifdef REVERT_TO_ARDUINO_SERIAL
     Serial.begin(BAUD_RATE, SERIAL_8N1, 3, 1, false);
+    SECONDARY_HW_SERIAL.begin(SERIAL_BRIDGE_BAUD, SERIAL_8N1, SERIAL_BRIDGE_RX_PIN, SERIAL_BRIDGE_TX_PIN, false);
+    SECONDARY_HW_SERIAL.write("\r\n");
     client_reset_read_buffer(CLIENT_ALL);
     Serial.write("\r\n");  // create some white space after ESP32 boot info
 #else
     Uart0.setPins(1, 3);  // Tx 1, Rx 3 - standard hardware pins
     Uart0.begin(BAUD_RATE, Uart::Data::Bits8, Uart::Stop::Bits1, Uart::Parity::None);
+    UartSecondary.setPins(SERIAL_BRIDGE_TX_PIN, SERIAL_BRIDGE_RX_PIN);
+    UartSecondary.begin(SERIAL_BRIDGE_BAUD, Uart::Data::Bits8, Uart::Stop::Bits1, Uart::Parity::None);
+    UartSecondary.write("\r\n");
 
     client_reset_read_buffer(CLIENT_ALL);
-    Uart0.write("\r\n");  // create some white space after ESP32 boot info
+    Uart0.write("BOOTED\r\n");  // create some white space after ESP32 boot info
 #endif
     clientCheckTaskHandle = 0;
     // create a task to check for incoming data
@@ -135,6 +150,12 @@ static uint8_t getClientChar(uint8_t* data) {
 #else
     if (client_buffer[CLIENT_SERIAL].availableforwrite() && (res = Uart0.read()) != -1) {
 #endif
+        *data = res;
+        return CLIENT_SERIAL;
+    }
+    if (client_buffer[CLIENT_SERIAL].availableforwrite() && (res = UartSecondary.read()) != -1) {
+        //Uart0.write("INCOMING DATA\r\n");  // create some white space after ESP32 boot info
+        
         *data = res;
         return CLIENT_SERIAL;
     }
@@ -371,8 +392,10 @@ void client_write(uint8_t client, const char* text) {
     if (client == CLIENT_SERIAL || client == CLIENT_ALL) {
 #ifdef REVERT_TO_ARDUINO_SERIAL
         Serial.write(text);
+        SECONDARY_HW_SERIAL.write(text);
 #else
         Uart0.write(text);
+        UartSecondary.write(text);
 #endif
     }
 }

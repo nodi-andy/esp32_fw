@@ -689,16 +689,16 @@ void report_realtime_status(uint8_t client) {
             if (ctrl_pin_state.bit.cycleStart) {
                 strcat(status, "S");
             }
-            if (ctrl_pin_state.bit.macro0) {
+            if (ctrl_pin_state.bit.macro1) {
                 strcat(status, "0");
             }
-            if (ctrl_pin_state.bit.macro1) {
+            if (ctrl_pin_state.bit.macro2) {
                 strcat(status, "1");
             }
-            if (ctrl_pin_state.bit.macro2) {
+            if (ctrl_pin_state.bit.macro3) {
                 strcat(status, "2");
             }
-            if (ctrl_pin_state.bit.macro3) {
+            if (ctrl_pin_state.bit.macro4) {
                 strcat(status, "3");
             }
         }
