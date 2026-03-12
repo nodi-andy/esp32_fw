@@ -50,3 +50,8 @@ void protocol_buffer_synchronize();
 
 // Executes the auto cycle feature, if enabled.
 void protocol_auto_cycle_start();
+
+// Track current file line number for planner tagging (0 = not from file).
+uint32_t protocol_get_current_file_line();
+void     protocol_set_current_file_line(uint32_t line);
+void     protocol_clear_current_file_line();

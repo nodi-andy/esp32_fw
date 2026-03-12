@@ -339,7 +339,9 @@ namespace WebUI {
         SFS_client     = (espresponse) ? espresponse->client() : CLIENT_ALL;
         SFS_auth_level = auth_level;
         // execute the first line now; Protocol.cpp handles later ones when SFS_ready_next
+        protocol_set_current_file_line(sfs_get_current_line_number());
         report_status_message(execute_line(fileLine, SFS_client, SFS_auth_level), SFS_client);
+        protocol_clear_current_file_line();
         report_realtime_status(SFS_client);
         webPrintln("ESP700:Done");
         return Error::Ok;
@@ -766,7 +768,9 @@ namespace WebUI {
         SD_client     = (espresponse) ? espresponse->client() : CLIENT_ALL;
         SD_auth_level = auth_level;
         // execute the first line now; Protocol.cpp handles later ones when SD_ready_next
+        protocol_set_current_file_line(sd_get_current_line_number());
         report_status_message(execute_line(fileLine, SD_client, SD_auth_level), SD_client);
+        protocol_clear_current_file_line();
         report_realtime_status(SD_client);
         webPrintln("");
         return Error::Ok;

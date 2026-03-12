@@ -248,6 +248,11 @@ void make_coordinate(CoordIndex index, const char* name) {
 void make_settings() {
     Setting::init();
 
+    // Settings referenced during startup realtime calls must be initialized first.
+    verbose_errors         = new FlagSetting(EXTENDED, WG, NULL, "Errors/Verbose", DEFAULT_VERBOSE_ERRORS);
+    report_on_state_change = new FlagSetting(EXTENDED, WG, NULL, "Report/OnStateChange", true);
+    number_axis            = new FakeSetting<int>(N_AXIS);
+
     // Propagate old coordinate system data to the new format if necessary.
     // G54 - G59 work coordinate systems, G28, G30 reference positions, etc
     make_coordinate(CoordIndex::G54, "G54");
@@ -259,10 +264,7 @@ void make_settings() {
     make_coordinate(CoordIndex::G28, "G28");
     make_coordinate(CoordIndex::G30, "G30");
 
-    verbose_errors = new FlagSetting(EXTENDED, WG, NULL, "Errors/Verbose", DEFAULT_VERBOSE_ERRORS);
-
     // number_axis = new IntSetting(EXTENDED, WG, NULL, "NumberAxis", N_AXIS, 0, 6, NULL, true);
-    number_axis = new FakeSetting<int>(N_AXIS);
 
     // Create the axis settings in the order that people are
     // accustomed to seeing.
@@ -398,8 +400,6 @@ void make_settings() {
     // TODO Settings - also need to clear, but not set, soft_limits
     arc_tolerance      = new FloatSetting(GRBL, WG, "12", "GCode/ArcTolerance", DEFAULT_ARC_TOLERANCE, 0, 1);
     junction_deviation = new FloatSetting(GRBL, WG, "11", "GCode/JunctionDeviation", DEFAULT_JUNCTION_DEVIATION, 0, 10);
-    report_on_state_change =
-        new FlagSetting(EXTENDED, WG, NULL, "Report/OnStateChange", true);
     status_mask        = new IntSetting(GRBL, WG, "10", "Report/Status", DEFAULT_STATUS_REPORT_MASK, 0, 3);
 
     probe_invert                 = new FlagSetting(GRBL, WG, "6", "Probe/Invert", DEFAULT_INVERT_PROBE_PIN);

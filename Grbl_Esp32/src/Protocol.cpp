@@ -32,6 +32,7 @@ static char    comment[LINE_BUFFER_SIZE];  // Line to be executed. Zero-terminat
 static uint8_t line_flags           = 0;
 static uint8_t char_counter         = 0;
 static uint8_t comment_char_counter = 0;
+static uint32_t protocol_current_file_line = 0;
 
 typedef struct {
     char buffer[LINE_BUFFER_SIZE];
@@ -96,6 +97,18 @@ Error execute_line(char* line, uint8_t client, WebUI::AuthenticationLevel auth_l
     return gc_execute_line(line, client);
 }
 
+uint32_t protocol_get_current_file_line() {
+    return protocol_current_file_line;
+}
+
+void protocol_set_current_file_line(uint32_t line) {
+    protocol_current_file_line = line;
+}
+
+void protocol_clear_current_file_line() {
+    protocol_current_file_line = 0;
+}
+
 bool can_park() {
     return
 #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
@@ -154,7 +167,9 @@ void protocol_main_loop() {
             char fileLine[255];
             if (readFileLine(fileLine, 255)) {
                 SD_ready_next = false;
+                protocol_set_current_file_line(sd_get_current_line_number());
                 report_status_message(execute_line(fileLine, SD_client, SD_auth_level), SD_client);
+                protocol_clear_current_file_line();
             } else {
                 char temp[50];
                 sd_get_current_filename(temp);
@@ -168,7 +183,9 @@ void protocol_main_loop() {
             char fileLine[255];
             if (readSFSFileLine(fileLine, 255)) {
                 SFS_ready_next = false;
+                protocol_set_current_file_line(sfs_get_current_line_number());
                 report_status_message(execute_line(fileLine, SFS_client, SFS_auth_level), SFS_client);
+                protocol_clear_current_file_line();
                 grbl_sendf(client, "[next:]\r\n");
             } else {
                 char temp[50];
@@ -194,6 +211,7 @@ void protocol_main_loop() {
                             return;  // Bail to calling function upon system abort
                         }
                         line = client_lines[client].buffer;
+                        protocol_clear_current_file_line();
 #ifdef REPORT_ECHO_RAW_LINE_RECEIVED
                         report_echo_line_received(line, client);
 #endif
@@ -310,7 +328,8 @@ void protocol_exec_rt_system() {
     ExecAlarm alarm = sys_rt_exec_alarm;  // Temp variable to avoid calling volatile multiple times.
     static State last_sys_state = State::Alarm;
 
-    if (report_on_state_change->get() && sys.state != last_sys_state) {
+    // Guard against early calls during startup before the setting is created.
+    if (report_on_state_change && report_on_state_change->get() && sys.state != last_sys_state) {
         report_realtime_status(CLIENT_ALL);
         last_sys_state = sys.state;
     }

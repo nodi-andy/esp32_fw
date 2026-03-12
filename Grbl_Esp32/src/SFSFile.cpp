@@ -18,6 +18,7 @@ uint8_t                    SFS_client     = CLIENT_SERIAL;
 WebUI::AuthenticationLevel SFS_auth_level = WebUI::AuthenticationLevel::LEVEL_GUEST;
 uint32_t                   sfs_current_line_number;     // stores the most recent line number read from the SD
 static char                comment[LINE_BUFFER_SIZE];  // Line to be executed. Zero-terminated.
+static uint32_t            sfs_last_reported_line = 0; // last line reported to clients
 
 boolean openSFSFile(fs::FS& fs, const char* path) {
     mySFSFile = fs.open(path);
@@ -124,6 +125,10 @@ boolean readSFSFileLine(char* line, int maxlen) {
 
     // Normal content line -> emit
     SFS_DBG("emit L%lu: '%s'", (unsigned long)sfs_current_line_number, p);
+    if (sfs_current_line_number != sfs_last_reported_line) {
+      sfs_last_reported_line = sfs_current_line_number;
+      grbl_sendf(SFS_client, "[SFS:%lu]\r\n", (unsigned long)sfs_current_line_number);
+    }
     return true;
   }
 

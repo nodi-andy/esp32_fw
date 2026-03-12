@@ -209,6 +209,7 @@ void plan_reset_buffer() {
 
 void plan_discard_current_block() {
     if (block_buffer_head != block_buffer_tail) {  // Discard non-empty buffer.
+        uint32_t file_line_number = block_buffer[block_buffer_tail].file_line_number;
         uint8_t block_index = plan_next_block_index(block_buffer_tail);
         // Push block_buffer_planned pointer, if encountered.
         if (block_buffer_tail == block_buffer_planned) {
@@ -216,6 +217,11 @@ void plan_discard_current_block() {
         }
         block_buffer_tail = block_index;
         sys_rt_exec_state.bit.statusReport = 1;
+        if (file_line_number > 0) {
+            grbl_sendf(CLIENT_ALL, "[CODE:DONE][BUF:%d][FL:%lu]\r\n", plan_get_block_buffer_count(), (unsigned long)file_line_number);
+        } else {
+            grbl_sendf(CLIENT_ALL, "[CODE:DONE][BUF:%d]\r\n", plan_get_block_buffer_count());
+        }
     }
 }
 
@@ -309,6 +315,7 @@ uint8_t plan_buffer_line(float* target, plan_line_data_t* pl_data) {
 #ifdef USE_LINE_NUMBERS
     block->line_number = pl_data->line_number;
 #endif
+    block->file_line_number = pl_data->file_line_number;
     // Compute and store initial move distance data.
     int32_t target_steps[MAX_N_AXIS], position_steps[MAX_N_AXIS];
     float   unit_vec[MAX_N_AXIS], delta_mm;

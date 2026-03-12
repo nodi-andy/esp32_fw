@@ -207,15 +207,18 @@ void report_status_message(Error status_code, uint8_t client) {
                 SFS_ready_next = true;  // flag so system_execute_line() will send the next line
             } else {
                 grbl_send(client, "ok\r\n");
+                grbl_sendf(client, "[BUF:%d]\r\n", plan_get_block_buffer_count());
             }
 #ifdef ENABLE_SD_CARD
             if (get_sd_state(false) == SDState::BusyPrinting) {
                 SD_ready_next = true;  // flag so system_execute_line() will send the next line
             } else {
                 grbl_send(client, "ok\r\n");
+                grbl_sendf(client, "[BUF:%d]\r\n", plan_get_block_buffer_count());
             }
 #else
             grbl_send(client, "ok\r\n");
+            grbl_sendf(client, "[BUF:%d]\r\n", plan_get_block_buffer_count());
 #endif
             break;
         default:
@@ -586,6 +589,10 @@ void report_echo_line_received(char* line, uint8_t client) {
 // requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
 // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
 void report_realtime_status(uint8_t client) {
+    // During startup settings may not yet be fully constructed; avoid null deref.
+    if (!status_mask || !number_axis) {
+        return;
+    }
     char status[200];
     char temp[MAX_N_AXIS * 20];
 
@@ -598,7 +605,10 @@ void report_realtime_status(uint8_t client) {
         strcat(status, "|MPos:");
     } else {
         strcat(status, "|WPos:");
-        mpos_to_wpos(print_position);
+        // Guard in case coordinate offsets are not yet initialized.
+        if (axis_settings[0] && gc_state.coord_system) {
+            mpos_to_wpos(print_position);
+        }
     }
     report_util_axis_values(print_position, temp);
     strcat(status, temp);

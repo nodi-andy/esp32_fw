@@ -1331,6 +1331,7 @@ Error gc_execute_line(char* line, uint8_t client) {
 #ifdef USE_LINE_NUMBERS
     pl_data->line_number = gc_state.line_number;  // Record data for planner use.
 #endif
+    pl_data->file_line_number = protocol_get_current_file_line();
     // [1. Comments feedback ]:  NOT SUPPORTED
     // [2. Set feed rate mode ]:
     gc_state.modal.feed_rate = gc_block.modal.feed_rate;

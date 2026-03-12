@@ -212,8 +212,25 @@ float system_convert_axis_steps_to_mpos(int32_t* steps, uint8_t idx) {
 // NOTE: If motor steps and machine position are not in the same coordinate frame, this function
 //   serves as a central place to compute the transformation.
 void system_convert_array_steps_to_mpos(float* position, int32_t* steps) {
-    auto  n_axis = number_axis->get();
-    float motors[n_axis];
+    // Protect against early calls before settings are fully constructed.
+    int n_axis = number_axis ? number_axis->get() : N_AXIS;
+    if (n_axis <= 0 || n_axis > MAX_N_AXIS) {
+        n_axis = N_AXIS;
+    }
+    bool settings_ready = true;
+    for (int idx = 0; idx < n_axis; idx++) {
+        if (!axis_settings[idx] || !axis_settings[idx]->steps_per_mm) {
+            settings_ready = false;
+            break;
+        }
+    }
+    if (!settings_ready) {
+        for (int idx = 0; idx < n_axis; idx++) {
+            position[idx] = 0.0f;
+        }
+        return;
+    }
+    float motors[MAX_N_AXIS];
     for (int idx = 0; idx < n_axis; idx++) {
         motors[idx] = (float)steps[idx] / axis_settings[idx]->steps_per_mm->get();
     }
