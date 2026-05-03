@@ -21,6 +21,7 @@ AxisMaskSetting* homing_dir_mask;
 AxisMaskSetting* homing_squared_axes;
 AxisMaskSetting* stallguard_debug_mask;
 
+FlagSetting* motor_hold_enable;
 FlagSetting* step_enable_invert;
 FlagSetting* limit_invert;
 FlagSetting* probe_invert;
@@ -408,6 +409,7 @@ void make_settings() {
     dir_invert_mask              = new AxisMaskSetting(GRBL, WG, "3", "Stepper/DirInvert", DEFAULT_DIRECTION_INVERT_MASK, postMotorSetting);
     step_invert_mask             = new AxisMaskSetting(GRBL, WG, "2", "Stepper/StepInvert", DEFAULT_STEPPING_INVERT_MASK, postMotorSetting);
     stepper_idle_lock_time       = new IntSetting(GRBL, WG, "1", "Stepper/IdleTime", DEFAULT_STEPPER_IDLE_LOCK_TIME, 0, 255);
+    motor_hold_enable            = new FlagSetting(GRBL, WG, "7", "Stepper/HoldEnable", false);
     pulse_microseconds           = new IntSetting(GRBL, WG, "0", "Stepper/Pulse", DEFAULT_STEP_PULSE_MICROSECONDS, 3, 1000);
     direction_delay_microseconds = new IntSetting(EXTENDED, WG, NULL, "Stepper/Direction/Delay", STEP_PULSE_DELAY, 0, 1000);
     enable_delay_microseconds = new IntSetting(EXTENDED, WG, NULL, "Stepper/Enable/Delay", DEFAULT_STEP_ENABLE_DELAY, 0, 1000);  // microseconds

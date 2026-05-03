@@ -439,7 +439,9 @@ void st_go_idle() {
     Stepper_Timer_Stop();
 
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-    if (((stepper_idle_lock_time->get() != 0xff) || sys_rt_exec_alarm != ExecAlarm::None || sys.state == State::Sleep) &&
+    // $7=1 (motor_hold_enable) keeps motors energized at idle, same as $1=255.
+    bool always_hold = motor_hold_enable->get() || (stepper_idle_lock_time->get() == 0xff);
+    if ((!always_hold || sys_rt_exec_alarm != ExecAlarm::None || sys.state == State::Sleep) &&
         sys.state != State::Homing) {
         // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
         // stop and not drift from residual inertial forces at the end of the last movement.
